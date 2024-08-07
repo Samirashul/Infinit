@@ -1,0 +1,6 @@
+@Infinit_HostAddress = http://localhost:5115
+
+GET {{Infinit_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
