@@ -14,9 +14,8 @@ namespace Infinit.Controllers
     {
         static readonly string url = "https://api.github.com/repos/lodash/lodash/git/trees/main?recursive=1";
         static Regex pattern = new Regex (".*\\.[jt]s$");
-        static GitNode[] nodes;
+        static GitNode[]? nodes;
         static ConcurrentDictionary<char, int> counter = new ConcurrentDictionary<char, int> ();
-        static List<Stat> orderer = new List<Stat>();
 
         [HttpGet(Name = "GetGitNodes")]
         public async Task<string> Get()
@@ -60,20 +59,8 @@ namespace Infinit.Controllers
         }
 
         private async Task AddCharacter(char c)
-        {
-            counter.AddOrUpdate(c, 1, (key, oldValue) => oldValue + 1);
+            {
+                counter.AddOrUpdate(c, 1, (key, oldValue) => oldValue + 1);
+            }
         }
-    }
-
-    class Stat
-    {
-        public Stat(char c, int i)
-        { 
-            this.character = c;
-            this.frequency = i;
-        }
-
-            public char character;
-            public int frequency;
-    }
 }
