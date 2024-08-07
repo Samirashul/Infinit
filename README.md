@@ -11,4 +11,6 @@ presented this program in its current state due to being informed the person gra
 Another option I explored but couldn't properly build was instead of using ConcurrentDictionary I would create an empty list and add characters as they were read to this list, as threads would not collide in this manner.
 Then after all the threads had finished I would synchronously build a dictionary as I read through this list.
 
+I also tried to, for each file being read, create a personal dictionary and collate them into a static list, and when all threads are done besides the main add the dictionaries together.
+
 If I was presented with this task in a professional environment this would be a question for a team lead or solution architect, and then would document the finalised solution to our internal knowledgebase.
