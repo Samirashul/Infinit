@@ -14,13 +14,18 @@ namespace Infinit.Controllers
     {
         static readonly string url = "https://api.github.com/repos/lodash/lodash/git/trees/main?recursive=1";
         static Regex pattern = new Regex (".*\\.[jt]s$");
-        static GitNode[]? nodes;
+        static GitNode[] nodes;
         static ConcurrentDictionary<char, int> counter = new ConcurrentDictionary<char, int> ();
+        static List<ConcurrentDictionary<char, int>> dictList = new List<ConcurrentDictionary<char, int>> ();
 
-        [HttpGet(Name = "GetGitNodes")]
+        [HttpGet(Name = "GetFrequencies")]
         public async Task<string> Get()
         {
-            await GetResponse();
+
+            var task = Task.Run(() => GetResponse());
+            task.Wait();
+
+
 
             string results = "";
             foreach(var pair in counter.Where(p => !p.Key.Equals('\n') && !p.Key.Equals(' ')).OrderByDescending(p => p.Value))
@@ -33,34 +38,43 @@ namespace Infinit.Controllers
         private async Task GetResponse()
         {
             var client = new HttpClient();
-            client.DefaultRequestHeaders.Add("Authorization", "Bearer [TOKEN HERE]");
+            client.DefaultRequestHeaders.Add("Authorization", "Bearer [YOUR TOKEN HERE]");
             client.DefaultRequestHeaders.Add("User-Agent", "request");
-            HttpResponseMessage response = await client.GetAsync(url);
+            var task = Task.Run(() => client.GetAsync(url));
+            task.Wait();
+            HttpResponseMessage response = task.Result;
             response.EnsureSuccessStatusCode();
             GitTree tree = JsonSerializer.Deserialize<GitTree>(await response.Content.ReadAsStringAsync());
 
             Console.WriteLine(tree.getTree().Count());
             nodes = tree.getTree().ToArray();
 
-            nodes.Where(x => pattern.Match(x.getPath()).Success).ToList().ForEach(async x => await readFile(x.getPath()));
+            nodes.Where(x => pattern.Match(x.getPath()).Success).ToList().ForEach(x => readFile(x.getPath()));
+
+            foreach (GitNode n in nodes.Where(x => pattern.Match(x.getPath()).Success))
+            {
+                if (!pattern.Match(n.getPath()).Success)
+                {
+                    var getTask = Task.Run(() => readFile(n.getPath()));
+                    task.Wait();
+                }
+            }
         }
 
         private async Task readFile(string path)
         {
             var client = new HttpClient();
-            client.DefaultRequestHeaders.Add("Authorization", "Bearer [TOKEN HERE]");
+            client.DefaultRequestHeaders.Add("Authorization", "Bearer [YOUR TOKEN HERE]");
             client.DefaultRequestHeaders.Add("User-Agent", "request");
-            HttpResponseMessage response = await client.GetAsync("https://api.github.com/repos/lodash/lodash/contents/" + path);
+
+            var task = Task.Run(() => client.GetAsync("https://api.github.com/repos/lodash/lodash/contents/" + path));
+            task.Wait();
+            HttpResponseMessage response = task.Result;
             response.EnsureSuccessStatusCode();
-            string result = await response.Content.ReadAsStringAsync();
-            GitFileItem item = JsonSerializer.Deserialize<GitFileItem>(result);
-            item.getTranslatedContent().ToCharArray().ToList().ForEach(async x => await AddCharacter(x));
+
+            GitFileItem item = JsonSerializer.Deserialize<GitFileItem>(await response.Content.ReadAsStringAsync());
+            item.getTranslatedContent().ToCharArray().ToList().ForEach(x => counter.AddOrUpdate(x, 1, (key, oldValue) => oldValue + 1));
 
         }
-
-        private async Task AddCharacter(char c)
-            {
-                counter.AddOrUpdate(c, 1, (key, oldValue) => oldValue + 1);
-            }
-        }
+    }
 }
